@@ -1,0 +1,9 @@
+[package]
+name = "server"
+version = "0.1.0"
+authors = ["Eunchul Song <song9446@unist.ac.kr>"]
+edition = "2018"
+
+[dependencies]
+ws = "*"
+slab = "0.4"

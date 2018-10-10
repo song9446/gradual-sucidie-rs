@@ -1,0 +1,11 @@
+[package]
+name = "client"
+version = "0.1.0"
+authors = ["Eunchul Song <song9446@unist.ac.kr>"]
+edition = "2018"
+
+[dependencies]
+stdweb = "*"
+#quicksilver = {git = "https://github.com/song9446/quicksilver", branch = "chromium-patched"}
+quicksilver = {path = "/home/art/Projects/quicksilver"}
+futures = "*"

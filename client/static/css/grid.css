@@ -1,0 +1,151 @@
+* {
+    box-sizing:border-box;
+}
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  left: 0;
+  top: 0;
+  font-size: 100%;
+  font-weight: 100;
+  font-family: Helvetica, sans-serif;
+}
+.app {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.full {
+    width: 100%;
+    height: 100%;
+}
+header {
+  width: 100%;
+  padding: 0.5em;
+  background-color: #fff;
+  box-shadow: 0px 3px 3px #888888;
+  margin-bottom: 1px;
+}
+.main {
+  flex-grow: 1;
+  align-items: start;
+  width: 100%;
+}
+footer {
+  width: 100%;
+  padding: 0.5em;
+  background-color: #fff;
+  margin-top: 1px;
+}
+.container {
+  margin: 0 auto;
+  background-color: #eaeaea;
+  max-width: 980px;
+  min-width: 320px;
+}
+
+.row { 
+  background-color: #fff;
+  display:flex;
+  width:100%;
+  flex-wrap: wrap;
+  /* box-shadow: 0px 3px 3px #888888; */
+  padding-top: 1em;
+  padding-bottom: 1em;
+}
+
+.col {
+  text-align: center;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 1;
+  flex: 1;
+  
+  margin: 0.5em;
+  padding: 0.5em;
+}
+.scol {
+  text-align: center;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 1;
+  flex: 1;
+  padding: 0.5em;
+}
+
+.p0 {
+    padding: 0;
+}
+.m0 {
+    margin: 0;
+}
+.pm0 {
+    padding: 0;
+    margin: 0;
+}
+.middle {
+    display: flex;
+    align-items: center;
+}
+.center {
+    display: flex;
+    justify-content: center;
+}
+.w1 {
+  max-width: calc(100% / 12);
+}
+.w2 {
+  max-width: calc(100% / 12 * 2);
+}
+.w3 {
+  max-width: calc(100% / 12 * 3);
+}
+.w4 {
+  max-width: calc(100% / 12 * 4);
+}
+.w5 {
+  max-width: calc(100% / 12 * 5);
+}
+.w6 {
+  max-width: calc(100% / 2);
+}
+
+.bgwhite {
+  background-color: #fff;
+}
+
+.dull{
+    outline: 0;
+    background: none;
+    border: none;
+    overflow: hidden;
+}
+.hidden {
+    display: none;
+}
+button.dull{
+    background: none;
+    border: none;
+}
+
+.title {
+  font-weight: 100;
+  padding: 10px;
+  text-align: center;
+}
+
+@media screen and (max-width: 768px) {
+  .container {
+    overflow: auto;
+  }
+  .col{
+     min-width: 100%;
+     width: 100%;
+     margin: 10px 0;
+  }
+}
+
