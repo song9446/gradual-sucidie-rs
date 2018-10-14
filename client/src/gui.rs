@@ -7,9 +7,11 @@ use quicksilver::{
     lifecycle::{Asset, Window},
 };
 
+#[derive(Clone)]
 struct MouseClick {
     x: f32, y: f32,
 }
+#[derive(Clone)]
 enum Event {
     MouseClick,
 }
@@ -30,60 +32,59 @@ impl Gui{
         self.widgets.push(Box::new(widget));
     }
     fn draw(&mut self, window: &mut Window) {
-        for w in self.widgets {
+        for w in self.widgets.iter() {
             w.draw(window);
         }
     }
-    fn event(&mut self, event: Event) {
+    fn event(&mut self, event: &Event) {
         for w in self.widgets {
             w.event(&event);
         }
     }
 }
 
-
-
 pub struct Label {
-    x: f32, y: f32,
-    font: Asset<Font>, style: FontStyle,
-    image: Asset<Image>, text: String,
+    x: f32, y: f32, style: FontStyle,
+    image: Image, text: String, updated: bool,
 }
 impl Label {
-    fn new(x:f32, y:f32) -> Label {
-        static default_font_asset: Asset<Font> = Asset::new(Font::load("font.ttf"));
-        static default_font_style: FontStyle = FontStyle::new(10., Color::BLACK);
+    fn new(x:f32, y:f32, style:FontStyle) -> Label {
         Label{x:x, y:y, 
-            font: default_font_asset, 
-            style: default_font_style,
+            font: font, 
+            style: style,
             image: Image::from_raw(&[], 1, 1, PixelFormat::RGBA).unwrap(),
             text: String::new(),
+            updated: true,
         }
+    }
+    fn update(&mut self) {
+        let mut image = &mut self.image;
+        let text = &self.text;
+        let style = &self.style;
+        self.font.execute(|font| {
+            *image = font.render(text, style).unwrap();
+            Ok(())
+        });
     }
     fn style(&mut self, size:f32, color:Color) -> &mut Label {
         self.style = FontStyle::new(size, color);
-        self.font.execute(|font| {
-            self.image = font.render(&self.text, &self.style).unwrap();
-            Ok(())
-        });
         self
     }
     fn text(&mut self, text: &str) -> &mut Label {
         self.text = text.to_string();
-        self.font.execute(|font| {
-            self.image = font.render(&self.text, &self.style).unwrap();
-            Ok(())
-        });
         self
     }
 }
-impl Widget for Label {
+impl<'a> Widget for Label<'a> {
     fn draw(&mut self, window: &mut Window) {
+        self.update();
         window.draw(&self.image.area().with_center((self.x, self.y)), Img(&self.image));
     }
     fn event(&mut self, event: &Event) {
 
     }
 }
+
 /*
 pub struct input {
     label: Label
