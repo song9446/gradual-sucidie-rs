@@ -38,10 +38,19 @@ impl Drawer for DrawContext{
 fn main(){
     let mut drawer = DrawContext::new();
     let mut gui = Gui::new();
-    let a = gui.gen(Label{text:"hi".to_string(), size:12., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
-    gui.gen(Label{text:"hello".to_string(), size:12., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
-    if let Label{ref text, ..} = a {
-        println!("{}?", text);
+    let id = gui.put(Label{text:"hi".to_string(), size:12., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
+    let id2 = gui.put(Label{text:"hello".to_string(), size:12., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
+    gui.draw(&mut drawer);
+    /*
+    let mut t = gui.take(id);
+    t.text = "hmm..".to_string();
+    gui.put(t);
+    */
+    if let Label{ref mut text, ..} = gui.get_mut(id) {
+        *text = "mutated".to_string();
     }
     gui.draw(&mut drawer);
+    //if let Label{ref text, ..} = a {
+    //    println!("{}?", text);
+    //}
 }

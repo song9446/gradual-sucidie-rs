@@ -1,0 +1,1 @@
+/home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/target/debug/naive_gui-20c7fb8072f124e5: /home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/src/lib.rs /home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/src/widget.rs

@@ -5,3 +5,4 @@ authors = ["Eunchul Song <song9446@unist.ac.kr>"]
 edition = "2018"
 
 [dependencies]
+slab = "*"

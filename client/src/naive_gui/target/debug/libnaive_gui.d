@@ -1,1 +1,1 @@
-/home/song/Projects/gradual-sucidie-rs/client/src/naive_gui/target/debug/libnaive_gui.rlib: /home/song/Projects/gradual-sucidie-rs/client/src/naive_gui/src/lib.rs /home/song/Projects/gradual-sucidie-rs/client/src/naive_gui/src/widget.rs
+/home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/target/debug/libnaive_gui.rlib: /home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/src/lib.rs /home/art/Projects/gradual-sucidie-rs/client/src/naive_gui/src/widget.rs
