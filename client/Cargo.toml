@@ -6,6 +6,6 @@ edition = "2018"
 
 [dependencies]
 stdweb = "*"
-#quicksilver = {git = "https://github.com/song9446/quicksilver", branch = "chromium-patched"}
-quicksilver = {path = "/home/art/Projects/quicksilver"}
+quicksilver = "*"
 futures = "*"
+naive_gui = {path= "src/naive_gui"}

@@ -4,9 +4,9 @@ pub trait Drawer{
     fn set_fill_style(&mut self, rgba:(f32, f32, f32, f32));
     fn set_stroke_style(&mut self, rgba:(f32, f32, f32, f32));
     fn set_font_style(&mut self, size: f32);
-    fn draw_rect(&self, xywh:(f32, f32, f32, f32));
-    fn draw_text(&self, text: &str, xy:(f32, f32));
-    fn rendered_text_wh(&self, text: &str) -> (f32, f32);
+    fn draw_rect(&mut self, xywh:(f32, f32, f32, f32));
+    fn draw_text(&mut self, text: &str, xy:(f32, f32));
+    fn rendered_text_wh(&mut self, text: &str) -> (f32, f32);
 }
 mod widget;
 pub use self::widget::Widget;
@@ -32,7 +32,7 @@ impl Gui {
     pub fn get_mut(&mut self, widget_id: usize) -> &mut Widget{
         self.widgets.get_mut(widget_id).unwrap()
     }
-    pub fn draw(&self, drawer:&mut Drawer) {
+    pub fn draw(&mut self, drawer:&mut Drawer) {
         for (_, widget) in self.widgets.iter() {
             widget.draw(drawer);
         }

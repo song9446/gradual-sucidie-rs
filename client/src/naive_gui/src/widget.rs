@@ -31,7 +31,7 @@ impl Widget{
                     drawer.set_fill_style(*rgba);
                     drawer.draw_text(text, *xy);
                     let (w, h) = drawer.rendered_text_wh(text);
-                    drawer.draw_rect((*xy.0+w, *xy.1, 1, h));
+                    drawer.draw_rect((xy.0+w, xy.1, 1., h));
                 }
                 else {
                     drawer.set_font_style(*size);
@@ -46,7 +46,7 @@ impl Widget{
         let (mx, my) = xy;
         match self {
             Widget::Input{ref mut focused, text:_, size:_, xy: (x, y), wh: (w,h), ..}=> {
-                if x<mx && mx<x+w && y<my && my<y+h {
+                if *x<mx && mx<*x+*w && *y<my && my<*y+*h {
                     *focused = true;
                 }
             }

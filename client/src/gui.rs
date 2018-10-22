@@ -3,95 +3,69 @@ extern crate quicksilver;
 use quicksilver::{
     Result,
     geom::{Shape, Vector, Rectangle},
-    graphics::{Background::Img, Color, Font, FontStyle, Image, PixelFormat},
+    graphics::{Background, Background::Img, Background::Col, Color, Font, FontStyle, Image, PixelFormat},
     lifecycle::{Asset, Window},
 };
+extern crate naive_gui;
+use naive_gui::{
+    Gui,
+    Widget,
+    Drawer,
+};
 
-#[derive(Clone)]
-struct MouseClick {
-    x: f32, y: f32,
+pub struct QuickSilverDrawContext<'a> {
+    font_size: f32,
+    fill_color: Color,
+    font_loader: Asset<Font>,
+    //stroke_color: Color,
+    window: &'a mut Window,
 }
-#[derive(Clone)]
-enum Event {
-    MouseClick,
-}
-
-pub trait Widget {
-    fn draw(&mut self, window: &mut Window); 
-    fn event(&mut self, event: &Event); 
-}
-pub struct Gui{
-    widgets: Vec<Box<Widget>>,
-    focused_index: usize,
-}
-impl Gui{
-    fn new() -> Gui{
-        Gui{widgets:Vec::new(), focused_index:0}
-    }
-    fn gen<T:Widget + 'static>(&mut self, widget: T) {
-        self.widgets.push(Box::new(widget));
-    }
-    fn draw(&mut self, window: &mut Window) {
-        for w in self.widgets.iter() {
-            w.draw(window);
-        }
-    }
-    fn event(&mut self, event: &Event) {
-        for w in self.widgets {
-            w.event(&event);
+impl<'a> QuickSilverDrawContext<'a>{
+    pub fn new(window: &'a mut Window) -> Self{
+        let (r,g,b,a) = (0., 0., 0., 1.);
+        QuickSilverDrawContext{
+            fill_color: Color::BLACK,
+            //stroke_color: (0., 0., 0., 1.),
+            font_size: 12., 
+            font_loader: Asset::new(Font::load("ttf/font.ttf")),
+            window: window,
         }
     }
 }
-
-pub struct Label {
-    x: f32, y: f32, style: FontStyle,
-    image: Image, text: String, updated: bool,
-}
-impl Label {
-    fn new(x:f32, y:f32, style:FontStyle) -> Label {
-        Label{x:x, y:y, 
-            font: font, 
-            style: style,
-            image: Image::from_raw(&[], 1, 1, PixelFormat::RGBA).unwrap(),
-            text: String::new(),
-            updated: true,
-        }
+impl<'a> Drawer for QuickSilverDrawContext<'a>{
+    fn set_fill_style(&mut self, rgba:(f32, f32, f32, f32)){
+        self.fill_color = Color::BLACK;
     }
-    fn update(&mut self) {
-        let mut image = &mut self.image;
-        let text = &self.text;
-        let style = &self.style;
-        self.font.execute(|font| {
-            *image = font.render(text, style).unwrap();
+    fn set_stroke_style(&mut self, rgba:(f32, f32, f32, f32)){
+        //self.stroke_rgba = rgba;
+    }
+    fn set_font_style(&mut self, size: f32) {
+        self.font_size = size;
+    }
+    fn draw_rect(&mut self, xywh:(f32, f32, f32, f32)) {
+        self.window.draw(&Rectangle::new((xywh.0, xywh.1), (xywh.2, xywh.3)), Col(self.fill_color));
+    }
+    fn draw_text(&mut self, text: &str, xy:(f32, f32)){
+        let font_size = &mut self.font_size;
+        let fill_color = &mut self.fill_color;
+        let window = &mut self.window;
+        self.font_loader.execute(|font| {
+            println!("hi");
+            let image = font.render(text, &FontStyle::new(*font_size, *fill_color)).unwrap();
+            let rect = &image.area();
+            (*window).draw(&image.area().translate((xy.0-image.area().x(), xy.1-image.area().y())), Img(&image));
             Ok(())
         });
     }
-    fn style(&mut self, size:f32, color:Color) -> &mut Label {
-        self.style = FontStyle::new(size, color);
-        self
-    }
-    fn text(&mut self, text: &str) -> &mut Label {
-        self.text = text.to_string();
-        self
-    }
-}
-impl<'a> Widget for Label<'a> {
-    fn draw(&mut self, window: &mut Window) {
-        self.update();
-        window.draw(&self.image.area().with_center((self.x, self.y)), Img(&self.image));
-    }
-    fn event(&mut self, event: &Event) {
-
+    fn rendered_text_wh(&mut self, text: &str) -> (f32, f32) {
+        let mut wh = (0., 0.);
+        let font_size = &mut self.font_size;
+        let fill_color = &mut self.fill_color;
+        self.font_loader.execute(|font| {
+            let image = font.render(text, &FontStyle::new(*font_size, *fill_color)).unwrap();
+            wh = (image.area().width(), image.area().height());
+            Ok(())
+        });
+        wh
     }
 }
-
-/*
-pub struct input {
-    label: Label
-}
-impl Widget for input {
-    fn draw(&mut self, window: &mut Window) -> Result<()> {
-        window.draw(
-    }
-}
-*/

@@ -35,6 +35,7 @@ impl Drawer for DrawContext{
         println!("draw text({}) at {}, {}", text, xy.0, xy.1);
     }
 }
+
 fn main(){
     let mut drawer = DrawContext::new();
     let mut gui = Gui::new();
