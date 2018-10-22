@@ -8,10 +8,10 @@ use ws::util::Token;
 struct User {
     cid: Option<model::Charactor_id>,
 }
-struct Token2user {
+struct Token2User {
     vec: Vec<User>,
 }
-impl Token2user {
+impl Token2User {
     fn put(&mut self, token: &Token, user: User) {
         if self.vec.len() >= token.0 {
             self.vec.resize((token.0+1)*2, User{cid:None});
@@ -21,12 +21,24 @@ impl Token2user {
     fn get(&mut self, token: &Token) -> &User {
         &self.vec[token.0]
     }
-    fn new() -> Token2user{ Token2user{ vec: Vec::new() } }
+    fn remove(&mut self, token: &Token) {
+        self.vec[token.0] = user{cid:None};
+    }
+    fn new() -> Token2User{ Token2User{ vec: Vec::new() } }
 }
 struct Server { 
     socket: ws::Sender, 
     count: u32,
-    users: Token2user,
+    users: Token2User,
+}
+impl Server {
+    fn new(socket: ws::Sender) -> Server {
+      Server{
+          socket: socket, 
+          count: 0,
+          users: Token2User::new(),
+      }
+    }
 }
 impl ws::Handler for Server {
     fn on_open(&mut self, _: ws::Handshake) -> ws::Result<()> {
@@ -47,8 +59,6 @@ impl ws::Handler for Server {
                 "Closing handshake failed! Unable to obtain closing status from client."),
             _ => println!("The client encountered an error: {}", reason),
         }
-
-        // The connection is going down, so we need to decrement the count
         self.count -= 1
     }
     fn on_error(&mut self, err: ws::Error) {
@@ -58,10 +68,6 @@ impl ws::Handler for Server {
 
 fn main() {
   ws::listen("127.0.0.1:3012", |socket| {
-      Server{
-          socket: socket, 
-          count: 0,
-          users: Token2user::new(),
-      }
+      Server::new(socket)
   }).unwrap()
 } 
