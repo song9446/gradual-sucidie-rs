@@ -21,20 +21,22 @@ use self::gui::QuickSilverDrawContext;
 
 struct Game {
     gui: Gui,
+    default_font: Asset<Font>,
 }
 
 impl State for Game {
     fn new() -> Result<Game> {
         let mut gui = Gui::new();
-        let id = gui.put(Widget::Label{text:"hi".to_string(), size:12., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
+        let id = gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
         Ok(
             Game{
-                gui: gui})
+                gui: gui,
+                default_font: Asset::new(Font::load("ttf/font.ttf")),})
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.draw(&Rectangle::new((100, 100), (32, 32)), Col(Color::BLUE));
-        let mut dc = QuickSilverDrawContext::new(window); 
+        let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
         self.gui.draw(&mut dc);
         Ok(())
     }

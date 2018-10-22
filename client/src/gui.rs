@@ -16,18 +16,18 @@ use naive_gui::{
 pub struct QuickSilverDrawContext<'a> {
     font_size: f32,
     fill_color: Color,
-    font_loader: Asset<Font>,
+    font_loader: &'a mut Asset<Font>,
     //stroke_color: Color,
     window: &'a mut Window,
 }
 impl<'a> QuickSilverDrawContext<'a>{
-    pub fn new(window: &'a mut Window) -> Self{
+    pub fn new(window: &'a mut Window, default_font: &'a mut Asset<Font>) -> Self{
         let (r,g,b,a) = (0., 0., 0., 1.);
         QuickSilverDrawContext{
             fill_color: Color::BLACK,
             //stroke_color: (0., 0., 0., 1.),
             font_size: 12., 
-            font_loader: Asset::new(Font::load("ttf/font.ttf")),
+            font_loader: default_font,
             window: window,
         }
     }
@@ -50,7 +50,6 @@ impl<'a> Drawer for QuickSilverDrawContext<'a>{
         let fill_color = &mut self.fill_color;
         let window = &mut self.window;
         self.font_loader.execute(|font| {
-            println!("hi");
             let image = font.render(text, &FontStyle::new(*font_size, *fill_color)).unwrap();
             let rect = &image.area();
             (*window).draw(&image.area().translate((xy.0-image.area().x(), xy.1-image.area().y())), Img(&image));
