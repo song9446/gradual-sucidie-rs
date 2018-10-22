@@ -23,15 +23,18 @@ impl Widget{
             Widget::Label{text, size, xy, rgba} => {
                 drawer.set_font_style(*size);
                 drawer.set_fill_style(*rgba);
-                drawer.draw_text(text, *xy);
+                let (w, h) = drawer.rendered_text_wh(text);
+                let (x, y) = *xy;
+                drawer.draw_text(text, (x-w*0.5,y-h*0.5));
             }
             Widget::Input{focused, text, size, xy, wh, rgba} => {
                 if *focused {
                     drawer.set_font_style(*size);
                     drawer.set_fill_style(*rgba);
-                    drawer.draw_text(text, *xy);
+                    let (x, y) = (xy.0-wh.0*0.5, xy.1-wh.1*0.5);
+                    drawer.draw_text(text, (x, y));
                     let (w, h) = drawer.rendered_text_wh(text);
-                    drawer.draw_rect((xy.0+w, xy.1, 1., h));
+                    drawer.draw_rect((x+w, y, 1., h));
                 }
                 else {
                     drawer.set_font_style(*size);

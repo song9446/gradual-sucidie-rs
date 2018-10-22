@@ -19,6 +19,9 @@ use naive_gui::{
 mod gui;
 use self::gui::QuickSilverDrawContext;
 
+const WINDOW_W: i32 = 300;
+const WINDOW_H: i32 = 400;
+
 struct Game {
     gui: Gui,
     default_font: Asset<Font>,
@@ -27,7 +30,9 @@ struct Game {
 impl State for Game {
     fn new() -> Result<Game> {
         let mut gui = Gui::new();
-        let id = gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
+        // let id = gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(200., 200.), rgba:(1.,1.,1.,0.)});
+        gui.put(Widget::Label{text:"Hello World".to_string(), size:24., xy:((WINDOW_W as f32)*0.5, (WINDOW_H as f32)*0.5), rgba:(1.,1.,1.,0.)});
+        //gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(200., 200.), rgba:(1.,1.,1.,0.)});
         Ok(
             Game{
                 gui: gui,
@@ -35,7 +40,7 @@ impl State for Game {
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
-        window.draw(&Rectangle::new((100, 100), (32, 32)), Col(Color::BLUE));
+        window.clear(Color::WHITE)?;
         let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
         self.gui.draw(&mut dc);
         Ok(())
@@ -43,5 +48,5 @@ impl State for Game {
 }
 
 fn main() {
-    run::<Game>("Font Example", Vector::new(800, 600), Settings::default());
+    run::<Game>("Gradual Suicide", Vector::new(WINDOW_W, WINDOW_H), Settings::default());
 }
