@@ -26,7 +26,7 @@ impl Gui {
     pub fn take(&mut self, widget_id: usize) -> Widget{
         self.widgets.remove(widget_id)
     }
-    pub fn get(&mut self, widget_id: usize) -> &Widget{
+    pub fn get(&self, widget_id: usize) -> &Widget{
         self.widgets.get(widget_id).unwrap()
     }
     pub fn get_mut(&mut self, widget_id: usize) -> &mut Widget{
