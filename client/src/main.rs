@@ -27,7 +27,7 @@ struct Game {
 impl State for Game {
     fn new() -> Result<Game> {
         let mut gui = Gui::new();
-        let id = gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(1., 1.), rgba:(1.,1.,1.,0.)});
+        let id = gui.put(Widget::Label{text:"hi".to_string(), size:20., xy:(200., 200.), rgba:(1.,1.,1.,0.)});
         Ok(
             Game{
                 gui: gui,
