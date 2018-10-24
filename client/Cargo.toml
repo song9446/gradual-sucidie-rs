@@ -8,4 +8,5 @@ edition = "2018"
 stdweb = "*"
 quicksilver = "*"
 futures = "*"
+ws = "*"
 naive_gui = {path= "src/naive_gui"}

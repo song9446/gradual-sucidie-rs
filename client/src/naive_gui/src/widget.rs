@@ -1,4 +1,5 @@
 #[macro_use]
+#[derive(Clone, Copy)]
 pub enum Key {
     Key1, Key2, Key3, Key4, Key5, Key6, Key7, Key8, Key9, Key0, A, B, C, D, E, F, G, H, I, J, K, L, M,
     N, O, P, Q, R, S, T, U, V, W, X, Y, Z, Escape, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
@@ -44,17 +45,17 @@ impl Widget{
                 drawer.draw_text(text, (x-w*0.5,y-h*0.5));
             }
             Widget::Input{focused, text, size, xy, wh, rgba} => {
+                let (x, y) = (xy.0-wh.0*0.5, xy.1-wh.1*0.5);
+                drawer.set_font_style(*size);
+                drawer.set_fill_style(*rgba);
+                drawer.draw_rect((x, y+wh.1, wh.0, 2.));
                 if *focused {
-                    drawer.set_font_style(*size);
-                    drawer.set_fill_style(*rgba);
                     let (x, y) = (xy.0-wh.0*0.5, xy.1-wh.1*0.5);
                     drawer.draw_text(text, (x, y));
                     let (w, h) = drawer.rendered_text_wh(text);
                     drawer.draw_rect((x+w, y, 1., h));
                 }
                 else {
-                    drawer.set_font_style(*size);
-                    drawer.set_fill_style(*rgba);
                     drawer.draw_text(text, *xy);
                 }
             }
@@ -65,7 +66,7 @@ impl Widget{
         let (mx, my) = xy;
         match self {
             Widget::Input{ref mut focused, text:_, size:_, xy: (x, y), wh: (w,h), ..}=> {
-                if *x<mx && mx<*x+*w && *y<my && my<*y+*h {
+                if *x-(*w)*0.5<mx && mx<*x+(*w)*0.5 && *y-(*h)*0.5<my && my<*y+(*h)*0.5 {
                     *focused = true;
                 }
                 else {

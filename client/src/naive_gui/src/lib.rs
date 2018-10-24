@@ -10,6 +10,7 @@ pub trait Drawer{
 }
 mod widget;
 pub use self::widget::Widget;
+pub use self::widget::Key;
 pub struct Gui {
     widgets: Slab<Widget>,
 }
@@ -35,6 +36,21 @@ impl Gui {
     pub fn draw(&mut self, drawer:&mut Drawer) {
         for (_, widget) in self.widgets.iter() {
             widget.draw(drawer);
+        }
+    }
+    pub fn mouse_down(&mut self, xy:(f32,f32)){
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.mouse_down(xy);
+        }
+    }
+    pub fn key_down(&mut self, key: Key) {
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.key_down(key);
+        }
+    }
+    pub fn key_input(&mut self, ch: char) {
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.key_input(ch);
         }
     }
 }
