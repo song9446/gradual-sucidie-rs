@@ -12,25 +12,29 @@ use std::sync::mpsc::{
     Receiver,
     RecvError,
 };
-#[cfg(target_arch = "wasm32")]
 pub enum Message {
     Text(String),
     Binary(Vec<u8>),
 }
 
+pub enum State {
+    Connected,
+    Done,
+    Error(&'static str),
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub type Message = ws::Message;
 
+#[cfg(target_arch="wasm32")]
 pub struct Websocket{
-    #[cfg(target_arch="wasm32")]
     socket: stdweb::web::WebSocket,
-    #[cfg(not(target_arch = "wasm32"))]
-    thread: std::thread::Thread,
     receiver: Receiver<Message>,
     sender: Sender<Message>,
+    state: Arc<Mutex<State>>,
 }
+#[cfg(target_arch="wasm32")]
 impl Websocket {
-    #[cfg(target_arch="wasm32")]
     pub fn new(address:&'static str) -> Result<Websocket, &'static str> {
         let (s, r) = channel();
         let res = stdweb::web::WebSocket::new(address);
@@ -45,29 +49,39 @@ impl Websocket {
             Err(())
         }
     }
-    #[cfg(target_arch="wasm32")]
+    pub fn recv(&self) -> Result<Message, RecvError> {
+        self.receiver.recv()
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub struct Websocket{
+    thread: std::thread::Thread,
+    receiver: Receiver<Message>,
+    sender: Arc<Mutex<Option<ws::Sender<Message>>>>,
+    state: Arc<Mutex<State>>,
+}
+#[cfg(not(target_arch = "wasm32"))]
+impl Websocket {
     pub fn new(address:&'static str) -> Result<Websocket, &'static str> {
         let (s, r) = channel();
+        let sender: Arc<Mutex<Option<Sender<Message>>>> = Arc::new(Mutex::new(None));
+        let sender2 = sender.clone();
         let thread = std::thread::spawn(move || {
             ws::connect(address, |out| {
+                *sender2.lock().unwrap() = Some(out);
                 move |msg| {
                     s.send(msg)
                 }
             });
         });
-        if let Ok(socket) = res {
-            Websocket{
-                socket: stdweb::web::WebSocket::new(address),
-                receiver: r,
-                sender: s,
-            }
-        }
-        else {
-            Err(())
+        Websocket{
+            socket: stdweb::web::WebSocket::new(address),
+            receiver: r,
+            sender: s,
         }
     }
-    pub fn recv(&self) -> Result<Message, RecvError> {
-        self.receiver.recv()
+    pub fn state() -> Result<(), &'static str>{
     }
 }
 
