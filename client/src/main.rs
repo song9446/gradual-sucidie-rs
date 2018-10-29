@@ -1,20 +1,9 @@
-#[macro_use]
 extern crate common;
 use common::model;
 use common::protocol::{
     serialize, deserialize, Packet,
 };
-extern crate stdweb;
-extern crate quicksilver;
 
-use quicksilver::{
-    Result,
-    combinators::result,
-    geom::{Shape, Vector, Rectangle},
-    graphics::{Background, Background::Img, Background::Col, Color, Font, FontStyle, Image},
-    lifecycle::{Asset, Settings, Window, run},
-    input::{Key, ButtonState, MouseButton},
-};
 
 extern crate naive_gui;
 use naive_gui::{
@@ -26,6 +15,11 @@ mod gui;
 use self::gui::QuickSilverDrawContext;
 use std::cmp;
 
+#[cfg(target_arch = "wasm32")]
+#[macro_use]
+extern crate stdweb;
+#[cfg(not(target_arch = "wasm32"))]
+extern crate ws;
 mod websocket;
 use self::websocket::Websocket;
 use self::websocket::Message;
@@ -33,9 +27,20 @@ mod text_input;
 use self::text_input::TextInput;
 //use self::websocket::Websocket;
 
+extern crate quicksilver;
+use quicksilver::{
+    Result,
+    combinators::result,
+    geom::{Shape, Vector, Rectangle},
+    graphics::{Background, Background::Img, Background::Col, Color, Font, FontStyle, Image},
+    lifecycle::{Asset, Settings, Window, run},
+    input::{Key, ButtonState, MouseButton},
+};
+
 const WINDOW_W: i32 = 300;
 const WINDOW_H: i32 = 400;
 const SERVER_ADDRESS: &'static str = "ws://127.0.0.1:3012";
+//const SERVER_ADDRESS: &'static str = "ws://127.0.0.1:3014";
 
 enum State{
     GameLoading,
@@ -183,19 +188,19 @@ impl quicksilver::lifecycle::State for Game {
                     State::GameLoading => {
                         start_menu.active_loading_spiner();
                         match self.socket.state() {
-                            websocket::State::Error(ref msg) => {
-                                self.scene = Scene::Panic(Panic::new((*msg).clone()));
+                            websocket::State::Error => {
+                                self.scene = Scene::Panic(Panic::new("Error: websocket fail..".to_string()));
                                 return Ok(());
                             }
                             websocket::State::Closed => {
-                                self.scene = Scene::Panic(Panic::new("Error: Connect Server Fail".to_string()));
+                                self.scene = Scene::Panic(Panic::new("Connection closed".to_string()));
                                 return Ok(());
                             }
                             websocket::State::Connected => {
                                 self.state = State::WaitNicknameInput;
                             }
                             websocket::State::Connecting => {
-                                self.state = State::Connecting;
+                                self.state = State::GameLoading;
                             }
                             _ => {}
                         }
@@ -286,6 +291,6 @@ impl quicksilver::lifecycle::State for Game {
 }
 
 fn main() {
-    //stdweb::initialize();
+    stdweb::initialize();
     run::<Game>("Gradual Suicide", Vector::new(WINDOW_W, WINDOW_H), Settings::default());
 }

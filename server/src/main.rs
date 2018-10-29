@@ -17,7 +17,7 @@ struct Token2User {
 }
 impl Token2User {
     fn put(&mut self, token: &Token, user: User) {
-        if self.vec.len() >= token.0 {
+        if self.vec.len() <= token.0 {
             self.vec.resize((token.0+1)*2, User{cid:None});
         }
         self.vec[token.0] = user;

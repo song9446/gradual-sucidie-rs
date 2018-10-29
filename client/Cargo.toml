@@ -5,9 +5,10 @@ authors = ["Eunchul Song <song9446@unist.ac.kr>"]
 edition = "2018"
 
 [dependencies]
-stdweb = "*"
 quicksilver = "*"
-futures = "*"
-ws = "*"
 naive_gui = {path= "src/naive_gui"}
 common = {path="../common"}
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+stdweb = "*"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ws = "*"
