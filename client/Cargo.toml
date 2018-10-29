@@ -10,3 +10,4 @@ quicksilver = "*"
 futures = "*"
 ws = "*"
 naive_gui = {path= "src/naive_gui"}
+common = {path="../common"}

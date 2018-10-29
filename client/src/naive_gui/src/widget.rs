@@ -30,6 +30,22 @@ pub enum Widget {
         wh:(f32, f32),
         rgba:(f32, f32, f32, f32),
     },
+    Button{
+        hovered: bool,
+        pressed: bool,
+        text:String, 
+        size:f32,
+        xy:(f32, f32),
+        wh:(f32, f32),
+        rgba:(f32, f32, f32, f32),
+    },
+    LoadingSpinner{
+        active:bool,
+        xy:(f32, f32),
+        radius:f32,
+        angle:f32,
+        rgba:(f32, f32, f32, f32),
+    },
 }
 use super::Drawer; 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -50,13 +66,71 @@ impl Widget{
                 drawer.set_fill_style(*rgba);
                 drawer.draw_rect((x, y+wh.1, wh.0, 2.));
                 if *focused {
-                    let (x, y) = (xy.0-wh.0*0.5, xy.1-wh.1*0.5);
                     drawer.draw_text(text, (x, y));
                     let (w, h) = drawer.rendered_text_wh(text);
                     drawer.draw_rect((x+w, y, 1., h));
                 }
                 else {
-                    drawer.draw_text(text, *xy);
+                    drawer.draw_text(text, (x, y));
+                }
+            }
+            Widget::Button{hovered, pressed, text, size, xy, wh, rgba} => {
+                let (x, y) = (xy.0-wh.0*0.5, xy.1-wh.1*0.5);
+                drawer.set_font_style(*size);
+                drawer.set_fill_style(*rgba);
+                let (w, h) = drawer.rendered_text_wh(text);
+                if *pressed {
+                    drawer.draw_rect((x, y, wh.0, 1.));
+                    drawer.draw_rect((x, y, 1., wh.1));
+                    drawer.draw_rect((x, y+wh.1, wh.0, 1.));
+                    drawer.draw_rect((x+wh.0, y, 1., wh.1));
+                    let (x, y) = (x+(wh.0-w)*0.5, y+(wh.1-h)*0.5);
+                    drawer.draw_text(text, (x, y));
+                }
+                else {
+                    let (x, y) = (xy.0-wh.0*0.5-2., xy.1-wh.1*0.5-2.);
+                    drawer.draw_rect((x, y, wh.0, 1.));
+                    drawer.draw_rect((x, y, 1., wh.1));
+                    drawer.draw_rect((x, y+wh.1, wh.0, 1.));
+                    drawer.draw_rect((x+wh.0, y, 1., wh.1));
+                    drawer.draw_rect((x+3., y+wh.1, wh.0, 3.));
+                    drawer.draw_rect((x+wh.0, y+3., 3., wh.1));
+                    let (x, y) = (x+(wh.0-w)*0.5, y+(wh.1-h)*0.5);
+                    drawer.draw_text(text, (x, y));
+                }
+            }
+            Widget::LoadingSpinner{active, xy, radius, angle, rgba} => {
+                if !*active { return; }
+                const MAX_ANGLE:f32 = std::f32::consts::PI*1.;
+                let (x, y) = (xy.0, xy.1);
+                let (cx, cy) = (x+angle.sin()**radius, y-angle.cos()**radius);
+                drawer.draw_rect((cx, cy, 3., 3.));
+            }
+            _ => {}
+        }
+    }
+    pub fn update(&mut self){
+        match self {
+            Widget::LoadingSpinner{active, angle, ..} => {
+                if !*active { return; }
+                const MAX_ANGLE:f32 = std::f32::consts::PI*100.;
+                *angle += (*angle).min(MAX_ANGLE-*angle).max(0.1)*0.08;
+                if *angle > MAX_ANGLE { *angle -= MAX_ANGLE; }
+            }
+            _ => {
+            }
+        }
+    }
+    pub fn mouse_move(&mut self, xy:(f32,f32)){
+        let (mx, my) = xy;
+        match self {
+            Widget::Button{ref mut hovered, pressed, xy: (x, y), wh: (w,h), ..}=> {
+                if *x-(*w)*0.5<mx && mx<*x+(*w)*0.5 && *y-(*h)*0.5<my && my<*y+(*h)*0.5 {
+                    *hovered = true;
+                }
+                else {
+                    *hovered = false;
+                    *pressed = false;
                 }
             }
             _ => {}
@@ -71,6 +145,22 @@ impl Widget{
                 }
                 else {
                     *focused = false;
+                }
+            }
+            Widget::Button{ref mut hovered, pressed, xy: (x, y), wh: (w,h), ..}=> {
+                if *x-(*w)*0.5<mx && mx<*x+(*w)*0.5 && *y-(*h)*0.5<my && my<*y+(*h)*0.5 {
+                    *pressed = true;
+                }
+            }
+            _ => {}
+        }
+    }
+    pub fn mouse_up(&mut self, xy:(f32,f32)){
+        let (mx, my) = xy;
+        match self {
+            Widget::Button{ref mut hovered, pressed, xy: (x, y), wh: (w,h), ..}=> {
+                if *x-(*w)*0.5<mx && mx<*x+(*w)*0.5 && *y-(*h)*0.5<my && my<*y+(*h)*0.5 {
+                    *pressed = false;
                 }
             }
             _ => {}

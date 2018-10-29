@@ -1,0 +1,11 @@
+[package]
+name = "common"
+version = "0.1.0"
+authors = ["Eunchul Song <song9446@unist.ac.kr>"]
+edition = "2018"
+
+[dependencies]
+serde_derive = "1"
+bincode = "1"
+serde = "1"
+

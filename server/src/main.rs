@@ -1,4 +1,8 @@
-mod model;
+extern crate common;
+use common::model;
+use common::protocol::{
+   serialize, deserialize, Packet, 
+};
 extern crate ws;
 
 use ws::{listen, CloseCode, Handler, Handshake, Message, Sender};
@@ -22,7 +26,7 @@ impl Token2User {
         &self.vec[token.0]
     }
     fn remove(&mut self, token: &Token) {
-        self.vec[token.0] = user{cid:None};
+        self.vec[token.0] = User{cid:None};
     }
     fn new() -> Token2User{ Token2User{ vec: Vec::new() } }
 }
@@ -42,14 +46,37 @@ impl Server {
 }
 impl ws::Handler for Server {
     fn on_open(&mut self, _: ws::Handshake) -> ws::Result<()> {
+        println!("user {:?} coming", self.socket.token());
         self.count += 1;
         self.users.put(&self.socket.token(), User{cid: Some(self.socket.token().0)});
-        self.socket.send("Hi")
+        Ok(())
     }
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-        println!("Got Message: {}, counter: {}", msg, self.count);
         println!("token: {:?}", self.users.get(&self.socket.token()).cid);
-        self.socket.send(msg)
+        let user = self.users.get(&self.socket.token());
+        if let ws::Message::Binary(bytes) = msg {
+            if let Ok(decoded) = deserialize(&bytes) {
+                match decoded {
+                    Packet::Join {nickname} => {
+                        println!("Join msg {}", nickname);
+                        let res = serialize(&Packet::JoinResult{success:true});
+                        if let Ok(encoded) = res {
+                            self.socket.send(encoded)
+                        }
+                        else {
+                            println!("fail to encoding msg");
+                            Ok(())
+                        }
+                    }
+                    _ => { Ok(()) }
+                }
+            } else {
+                println!("fail to deserialize msg");
+                Ok(())
+            }
+        }  else {
+            Ok(())
+        }
     }
     fn on_close(&mut self, code: ws::CloseCode, reason: &str) {
         match code {

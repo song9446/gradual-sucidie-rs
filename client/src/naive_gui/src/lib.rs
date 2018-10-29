@@ -38,9 +38,24 @@ impl Gui {
             widget.draw(drawer);
         }
     }
+    pub fn update(&mut self){
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.update();
+        }
+    }
+    pub fn mouse_move(&mut self, xy:(f32,f32)){
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.mouse_move(xy);
+        }
+    }
     pub fn mouse_down(&mut self, xy:(f32,f32)){
         for (_, mut widget) in self.widgets.iter_mut() {
             widget.mouse_down(xy);
+        }
+    }
+    pub fn mouse_up(&mut self, xy:(f32,f32)){
+        for (_, mut widget) in self.widgets.iter_mut() {
+            widget.mouse_up(xy);
         }
     }
     pub fn key_down(&mut self, key: Key) {

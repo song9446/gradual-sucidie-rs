@@ -1,0 +1,1 @@
+/home/art/Projects/gradual-sucidie-rs/common/target/debug/common-995a7cc91cb3da99: /home/art/Projects/gradual-sucidie-rs/common/src/lib.rs /home/art/Projects/gradual-sucidie-rs/common/src/model/mod.rs /home/art/Projects/gradual-sucidie-rs/common/src/protocol.rs

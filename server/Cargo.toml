@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 ws = "*"
 slab = "0.4"
+common = {path="../common"}

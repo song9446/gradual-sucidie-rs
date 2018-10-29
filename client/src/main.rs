@@ -1,4 +1,9 @@
 #[macro_use]
+extern crate common;
+use common::model;
+use common::protocol::{
+    serialize, deserialize, Packet,
+};
 extern crate stdweb;
 extern crate quicksilver;
 
@@ -23,26 +28,26 @@ use std::cmp;
 
 mod websocket;
 use self::websocket::Websocket;
+use self::websocket::Message;
+mod text_input;
+use self::text_input::TextInput;
+//use self::websocket::Websocket;
 
 const WINDOW_W: i32 = 300;
 const WINDOW_H: i32 = 400;
-const SERVER_ADDRESS: &'static str = "http://aing.io:30";
+const SERVER_ADDRESS: &'static str = "ws://127.0.0.1:3012";
 
-const KEY_LIST: &[Key] = &[Key::Key1, Key::Key2, Key::Key3, Key::Key4, Key::Key5, Key::Key6, Key::Key7, Key::Key8, Key::Key9, Key::Key0, Key::A, Key::B, Key::C, Key::D,
-    Key::E, Key::F, Key::G, Key::H, Key::I, Key::J, Key::K, Key::L, Key::M, Key::N, Key::O, Key::P, Key::Q, Key::R, Key::S, Key::T, Key::U, Key::V, Key::W, Key::X, Key::Y, Key::Z,
-    Key::Escape, Key::F1, Key::F2, Key::F3, Key::F4, Key::F5, Key::F6, Key::F7, Key::F8, Key::F9, Key::F10, Key::F11, Key::F12,
-    Key::F13, Key::F14, Key::F15, Key::Snapshot, Key::Scroll, Key::Pause, Key::Insert, Key::Home, Key::Delete, Key::End, Key::PageDown, Key::PageUp, Key::Left, Key::Up, Key::Right,
-    Key::Down, Key::Back, Key::Return, Key::Space, Key::Compose, Key::Caret, Key::Numlock, Key::Numpad0, Key::Numpad1, Key::Numpad2, Key::Numpad3, Key::Numpad4, Key::Numpad5,
-    Key::Numpad6, Key::Numpad7, Key::Numpad8, Key::Numpad9, Key::AbntC1, Key::AbntC2, Key::Add, Key::Apostrophe, Key::Apps, Key::At, Key::Ax, Key::Backslash, Key::Calculator,
-    Key::Capital, Key::Colon, Key::Comma, Key::Convert, Key::Decimal, Key::Divide, Key::Equals, Key::Grave, Key::Kana, Key::Kanji, Key::LAlt, Key::LBracket, Key::LControl,
-    Key::LShift, Key::LWin, Key::Mail, Key::MediaSelect, Key::MediaStop, Key::Minus, Key::Multiply, Key::Mute, Key::MyComputer, Key::NavigateForward,
-    Key::NavigateBackward, Key::NextTrack, Key::NoConvert, Key::NumpadComma, Key::NumpadEnter, Key::NumpadEquals, Key::OEM102, Key::Period, Key::PlayPause,
-    Key::Power, Key::PrevTrack, Key::RAlt, Key::RBracket, Key::RControl, Key::RShift, Key::RWin, Key::Semicolon, Key::Slash, Key::Sleep, Key::Stop, Key::Subtract,
-    Key::Sysrq, Key::Tab, Key::Underline, Key::Unlabeled, Key::VolumeDown, Key::VolumeUp, Key::Wake, Key::WebBack, Key::WebFavorites, Key::WebForward, Key::WebHome,
-    Key::WebRefresh, Key::WebSearch, Key::WebStop, Key::Yen];
-
+enum State{
+    GameLoading,
+    Connecting,
+    WaitNicknameInput,
+    NicknameSending,
+    InGame,
+}
 struct StartMenu {
     gui: Gui,
+    loading_spiner_widget_id: usize,
+    game_start_button_id: usize,
     nickname_widget_id: usize,
 }
 impl StartMenu {
@@ -71,15 +76,51 @@ impl StartMenu {
                 rgba:BLACK, 
                 text: "".to_string(),  
                 focused: true, });
+        let game_start_button_id = gui.put(
+            Widget::Button{
+                hovered: false,
+                pressed: false,
+                text:"Start!".to_string(), 
+                size:NICKNAME_INPUT_FONT_SIZE, 
+                xy:((WINDOW_W as f32)*0.5, (WINDOW_H as f32)*0.7),
+                wh:((WINDOW_W as f32)*0.5, NICKNAME_INPUT_FONT_SIZE), 
+                rgba:BLACK});
+        let loading_spiner_widget_id = gui.put(
+            Widget::LoadingSpinner{
+                active: false,
+                xy:((WINDOW_W as f32)*0.5, (WINDOW_H as f32)*0.5),
+                angle: 0.,
+                radius: 30.,
+                rgba:BLACK});
         StartMenu {
-            gui: gui,
-            nickname_widget_id: nickname_widget_id, }
+            gui,
+            nickname_widget_id, 
+            loading_spiner_widget_id,
+            game_start_button_id,
+        }
     }
     fn nickname(&mut self) -> String {
-        if let Widget::Label{text:text, ..} = self.gui.get(self.nickname_widget_id) {
-             text.to_string()
+        if let Widget::Label{text, ..} = self.gui.get(self.nickname_widget_id) {
+            text.to_string()
         } else{
             "".to_string()
+        }
+    }
+    fn active_loading_spiner(&mut self) {
+        if let Widget::LoadingSpinner{ref mut active, ..} = self.gui.get_mut(self.loading_spiner_widget_id) {
+            *active = true;
+        }
+    }
+    fn deactive_loading_spiner(&mut self) {
+        if let Widget::LoadingSpinner{ref mut active, ..} = self.gui.get_mut(self.loading_spiner_widget_id) {
+            *active = false;
+        }
+    }
+    fn is_start_button_pressed(&mut self) -> bool {
+        if let Widget::Button{pressed, ..} = self.gui.get_mut(self.game_start_button_id) {
+            *pressed
+        } else {
+            false
         }
     }
 }
@@ -87,12 +128,12 @@ struct Panic {
     gui: Gui,
 }
 impl Panic {
-    fn new(message:&'static str) -> Panic {
+    fn new(message:String) -> Panic {
         let mut gui = Gui::new();
         const RED: (f32, f32, f32, f32) = (1., 1., 1., 0.);
         gui.put(
             Widget::Label{
-                text:message.to_string(),
+                text:message,
                 size:12., 
                 xy:((WINDOW_W as f32)*0.5, (WINDOW_H as f32)*0.5), 
                 rgba:RED});
@@ -102,64 +143,113 @@ impl Panic {
     }
 }
 
-enum State {
+struct InGame {
+    nickname: String,
+}
+
+enum Scene {
     StartMenu(StartMenu),
     Panic(Panic),
-    InGame,
+    InGame(InGame),
 }
 
 struct Game {
     state: State,
-//    socket: stdweb::web::WebSocket,
+    scene: Scene,
+    socket: Websocket,
     default_font: Asset<Font>,
-    keys_ready: [bool; 256],
+    text_input: TextInput,
 }
 
 impl quicksilver::lifecycle::State for Game {
     fn new() -> Result<Game> {
         Ok(Game{
-            state: State::StartMenu(StartMenu::new()),
-//            socket: stdweb::web::WebSocket::new("").unwrap(),
+            state: State::GameLoading,
+            scene: Scene::StartMenu(StartMenu::new()),
+            socket: Websocket::new(SERVER_ADDRESS),
             default_font: Asset::new(Font::load("ttf/font.ttf")),
-            keys_ready: [false; 256],
+            text_input: TextInput::new(),
         })
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
-        match &mut self.state {
-            State::Panic(Panic{ref mut gui}) => {
+        match &mut self.scene {
+            Scene::Panic(Panic{ref mut gui}) => {
             }
-            State::StartMenu(ref mut start_menu) => {
-                if window.mouse()[MouseButton::Left] == ButtonState::Pressed {
-                    let mpos = window.mouse().pos();
-                    start_menu.gui.mouse_down((mpos.x, mpos.y));
-                }
-                if window.keyboard()[Key::Back].is_down(){
-                    if self.keys_ready[Key::Back as usize] {
-                        self.keys_ready[Key::Back as usize] = false;
-                        start_menu.gui.key_down(naive_gui::Key::Back);
+            Scene::StartMenu(ref mut start_menu) => {
+                start_menu.gui.update();
+                let loading_spiner_widget_id = start_menu.loading_spiner_widget_id;
+                match &mut self.state {
+                    State::GameLoading => {
+                        start_menu.active_loading_spiner();
+                        match self.socket.state() {
+                            websocket::State::Error(ref msg) => {
+                                self.scene = Scene::Panic(Panic::new((*msg).clone()));
+                                return Ok(());
+                            }
+                            websocket::State::Closed => {
+                                self.scene = Scene::Panic(Panic::new("Error: Connect Server Fail".to_string()));
+                                return Ok(());
+                            }
+                            websocket::State::Connected => {
+                                self.state = State::WaitNicknameInput;
+                            }
+                            websocket::State::Connecting => {
+                                self.state = State::Connecting;
+                            }
+                            _ => {}
+                        }
+                        // Done game loading
                     }
-                }
-                else {
-                    self.keys_ready[Key::Back as usize] = true;
-                }
-                for i in (Key::Key1 as u8)..(Key::Z as u8 + 1) {
-                    if window.keyboard()[KEY_LIST[i as usize]].is_down(){
-                        if self.keys_ready[i as usize] {
-                            self.keys_ready[i as usize] = false;
-                            let ch = 
-                                if i >= (Key::A as u8) {
-                                    (('a' as u8) + (i - (Key::A as u8))) as char
-                                }else if i == (Key::Key0 as u8) {
-                                    '0'
-                                }else {
-                                    (('1' as u8) + (i - (Key::Key1 as u8))) as char
-                                };
+                    State::Connecting => {
+                        start_menu.active_loading_spiner();
+                    }
+                    State::WaitNicknameInput => {
+                        start_menu.deactive_loading_spiner();
+                        let mpos = window.mouse().pos();
+                        start_menu.gui.mouse_move((mpos.x, mpos.y));
+                        if start_menu.is_start_button_pressed() {
+                            self.state = State::NicknameSending;
+                            self.socket.send(
+                                Message::Binary(serialize(&Packet::Join{nickname: &start_menu.nickname()}).unwrap()));
+                        }
+                        if window.mouse()[MouseButton::Left] == ButtonState::Pressed {
+                            start_menu.gui.mouse_down((mpos.x, mpos.y));
+                        }
+                        if window.mouse()[MouseButton::Left] == ButtonState::Released {
+                            start_menu.gui.mouse_up((mpos.x, mpos.y));
+                        }
+                        if window.keyboard()[Key::Back] == ButtonState::Pressed {
+                            start_menu.gui.key_down(naive_gui::Key::Back);
+                        }
+                        if let Some(ch) = self.text_input.char(window.keyboard()) {
                             start_menu.gui.key_input(ch);
                         }
                     }
-                    else{
-                        self.keys_ready[i as usize] = true;
+                    State::NicknameSending => {
+                        start_menu.active_loading_spiner();
+                        if let Ok(msg) = self.socket.try_recv() {
+                            if let Message::Binary(bytes) = msg {
+                                if let Ok(decoded) = deserialize(&bytes) {
+                                    if let Packet::JoinResult{success} = decoded {
+                                        if success {
+                                            self.scene = Scene::InGame(InGame{nickname: start_menu.nickname()});
+                                            self.state = State::InGame;
+                                            println!("??");
+                                        }
+                                        else {
+                                            self.scene = Scene::Panic(Panic::new("fail to join".to_string()));
+                                            self.state = State::InGame;
+                                            println!("!!");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        self.scene = Scene::Panic(Panic::new("invalid state".to_string()));
+                        return Ok(());
                     }
                 }
             }
@@ -168,16 +258,26 @@ impl quicksilver::lifecycle::State for Game {
         Ok(())
     }
     fn draw(&mut self, window: &mut Window) -> Result<()> {
-        match &mut self.state {
-            State::Panic(Panic{ref mut gui}) => {
+        match &mut self.scene {
+            Scene::Panic(Panic{ref mut gui}) => {
                 window.clear(Color::WHITE)?;
                 let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
                 gui.draw(&mut dc);
             }
-            State::StartMenu(ref mut start_menu) => {
-                window.clear(Color::WHITE)?;
+            Scene::StartMenu(ref mut start_menu) => {
+                match self.state {
+                    State::Connecting | State::NicknameSending => {
+                        window.clear(Color{r: 0.8, g: 0.8, b: 0.8, a: 1.0 })?;
+                    }
+                    _ => {
+                        window.clear(Color::WHITE)?;
+                    }
+                }
                 let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
                 start_menu.gui.draw(&mut dc);
+            }
+            Scene::InGame(ref mut in_game) => {
+                window.clear(Color::WHITE)?;
             }
             _ => {}
         }
