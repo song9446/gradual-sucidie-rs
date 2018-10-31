@@ -27,6 +27,7 @@ mod text_input;
 use self::text_input::TextInput;
 //use self::websocket::Websocket;
 
+
 extern crate quicksilver;
 use quicksilver::{
     Result,
@@ -37,10 +38,14 @@ use quicksilver::{
     input::{Key, ButtonState, MouseButton},
 };
 
-const WINDOW_W: i32 = 300;
-const WINDOW_H: i32 = 400;
-const SERVER_ADDRESS: &'static str = "ws://127.0.0.1:3012";
+mod scene;
+use self::scene::{Game, Scene};
+
+const WINDOW_W: i32 = 600;
+const WINDOW_H: i32 = 800;
+//const SERVER_ADDRESS: &'static str = "ws://aing.io:3306";
 //const SERVER_ADDRESS: &'static str = "ws://127.0.0.1:3014";
+const SERVER_ADDRESS: &'static str = "ws://10.64.135.197:3306";
 
 enum State{
     GameLoading,
@@ -49,6 +54,23 @@ enum State{
     NicknameSending,
     InGame,
 }
+struct Gamedata {
+    state: State,
+    socket: Websocket,
+    default_font: Asset<Font>,
+    text_input: TextInput,
+}
+impl Gamedata {
+    fn new() -> Gamedata{
+        Gamedata{
+            state: State::GameLoading,
+            socket: Websocket::new(SERVER_ADDRESS),
+            default_font: Asset::new(Font::load("ttf/font.ttf")),
+            text_input: TextInput::new(),
+        }
+    }
+}
+
 struct StartMenu {
     gui: Gui,
     loading_spiner_widget_id: usize,
@@ -129,11 +151,113 @@ impl StartMenu {
         }
     }
 }
+impl Scene for StartMenu {
+    type Data = Gamedata;
+    fn update(&mut self, window: &mut Window, data: &mut Self::Data) -> Option<Box<dyn Scene<Data=Self::Data>>> {
+        self.gui.update();
+        let loading_spiner_widget_id = self.loading_spiner_widget_id;
+        match &mut data.state {
+            State::GameLoading => {
+                self.active_loading_spiner();
+                match data.socket.state() {
+                    websocket::State::Error => {
+                        Some(Box::new(Panic::new("Error: websocket fail..".to_string())))
+                    }
+                    websocket::State::Closed => {
+                        Some(Box::new(Panic::new("Connection closed".to_string())))
+                    }
+                    websocket::State::Connected => {
+                        data.state = State::WaitNicknameInput;
+                        None
+                    }
+                    websocket::State::Connecting => {
+                        data.state = State::GameLoading;
+                        None
+                    }
+                    _ => {
+                        None
+                    }
+                }
+                // Done game loading
+            }
+            State::Connecting => {
+                self.active_loading_spiner();
+                None
+            }
+            State::WaitNicknameInput => {
+                self.deactive_loading_spiner();
+                let mpos = window.mouse().pos();
+                self.gui.mouse_move((mpos.x, mpos.y));
+                if self.is_start_button_pressed() {
+                    data.state = State::NicknameSending;
+                    data.socket.send(
+                        Message::Binary(serialize(&Packet::Join{nickname: &self.nickname()}).unwrap()));
+                }
+                if window.mouse()[MouseButton::Left] == ButtonState::Pressed {
+                    self.gui.mouse_down((mpos.x, mpos.y));
+                }
+                if window.mouse()[MouseButton::Left] == ButtonState::Released {
+                    self.gui.mouse_up((mpos.x, mpos.y));
+                }
+                if window.keyboard()[Key::Back] == ButtonState::Pressed {
+                    self.gui.key_down(naive_gui::Key::Back);
+                }
+                if let Some(ch) = data.text_input.char(window.keyboard()) {
+                    self.gui.key_input(ch);
+                }
+                None
+            }
+            State::NicknameSending => {
+                self.active_loading_spiner();
+                if let Ok(msg) = data.socket.try_recv() {
+                    if let Message::Binary(bytes) = msg {
+                        if let Ok(decoded) = deserialize(&bytes) {
+                            if let Packet::JoinResult{success} = decoded {
+                                if success {
+                                    data.state = State::InGame;
+                                    Some(Box::new(InGame{nickname: self.nickname()}))
+                                }
+                                else {
+                                    data.state = State::InGame;
+                                    Some(Box::new(Panic::new("fail to join".to_string())))
+                                }
+                            } else {
+                                Some(Box::new(Panic::new("fail to parse decode".to_string())))
+                            }
+                        } else {
+                            Some(Box::new(Panic::new("fail to decode".to_string())))
+                        }
+                    }else {
+                        Some(Box::new(Panic::new("message is not a binary type".to_string())))
+                    }
+                }else {
+                    None
+                }
+            }
+            _ => {
+                Some(Box::new(Panic::new("invalid state".to_string())))
+            }
+        }
+    }
+    fn draw(&mut self, window: &mut Window, data: &mut Self::Data) -> Result<()> {
+        match data.state {
+            State::Connecting | State::NicknameSending => {
+                window.clear(Color{r: 0.8, g: 0.8, b: 0.8, a: 1.0 })?;
+            }
+            _ => {
+                window.clear(Color::WHITE)?;
+            }
+        }
+        let mut dc = QuickSilverDrawContext::new(window, &mut data.default_font);
+        self.gui.draw(&mut dc);
+        Ok(())
+    }
+}
 struct Panic {
     gui: Gui,
 }
 impl Panic {
-    fn new(message:String) -> Panic {
+    fn new(message: String) -> Panic {
         let mut gui = Gui::new();
         const RED: (f32, f32, f32, f32) = (1., 1., 1., 0.);
         gui.put(
@@ -147,150 +271,54 @@ impl Panic {
         }
     }
 }
+impl Scene for Panic{
+    type Data = Gamedata;
+    fn update(&mut self, window: &mut Window, data: &mut Self::Data) -> Option<Box<dyn Scene<Data=Self::Data>>> {
+        None
+    }
+    fn draw(&mut self, window: &mut Window, data: &mut Self::Data) -> Result<()> {
+        window.clear(Color::WHITE)?;
+        let mut dc = QuickSilverDrawContext::new(window, &mut data.default_font);
+        self.gui.draw(&mut dc);
+        Ok(())
+    }
+}
 
 struct InGame {
     nickname: String,
 }
-
-enum Scene {
-    StartMenu(StartMenu),
-    Panic(Panic),
-    InGame(InGame),
-}
-
-struct Game {
-    state: State,
-    scene: Scene,
-    socket: Websocket,
-    default_font: Asset<Font>,
-    text_input: TextInput,
-}
-
-impl quicksilver::lifecycle::State for Game {
-    fn new() -> Result<Game> {
-        Ok(Game{
-            state: State::GameLoading,
-            scene: Scene::StartMenu(StartMenu::new()),
-            socket: Websocket::new(SERVER_ADDRESS),
-            default_font: Asset::new(Font::load("ttf/font.ttf")),
-            text_input: TextInput::new(),
-        })
+impl Scene for InGame {
+    type Data = Gamedata;
+    fn update(&mut self, window: &mut Window, data: &mut Self::Data) -> Option<Box<dyn Scene<Data=Self::Data>>> {
+        None
     }
-
-    fn update(&mut self, window: &mut Window) -> Result<()> {
-        match &mut self.scene {
-            Scene::Panic(Panic{ref mut gui}) => {
-            }
-            Scene::StartMenu(ref mut start_menu) => {
-                start_menu.gui.update();
-                let loading_spiner_widget_id = start_menu.loading_spiner_widget_id;
-                match &mut self.state {
-                    State::GameLoading => {
-                        start_menu.active_loading_spiner();
-                        match self.socket.state() {
-                            websocket::State::Error => {
-                                self.scene = Scene::Panic(Panic::new("Error: websocket fail..".to_string()));
-                                return Ok(());
-                            }
-                            websocket::State::Closed => {
-                                self.scene = Scene::Panic(Panic::new("Connection closed".to_string()));
-                                return Ok(());
-                            }
-                            websocket::State::Connected => {
-                                self.state = State::WaitNicknameInput;
-                            }
-                            websocket::State::Connecting => {
-                                self.state = State::GameLoading;
-                            }
-                            _ => {}
-                        }
-                        // Done game loading
-                    }
-                    State::Connecting => {
-                        start_menu.active_loading_spiner();
-                    }
-                    State::WaitNicknameInput => {
-                        start_menu.deactive_loading_spiner();
-                        let mpos = window.mouse().pos();
-                        start_menu.gui.mouse_move((mpos.x, mpos.y));
-                        if start_menu.is_start_button_pressed() {
-                            self.state = State::NicknameSending;
-                            self.socket.send(
-                                Message::Binary(serialize(&Packet::Join{nickname: &start_menu.nickname()}).unwrap()));
-                        }
-                        if window.mouse()[MouseButton::Left] == ButtonState::Pressed {
-                            start_menu.gui.mouse_down((mpos.x, mpos.y));
-                        }
-                        if window.mouse()[MouseButton::Left] == ButtonState::Released {
-                            start_menu.gui.mouse_up((mpos.x, mpos.y));
-                        }
-                        if window.keyboard()[Key::Back] == ButtonState::Pressed {
-                            start_menu.gui.key_down(naive_gui::Key::Back);
-                        }
-                        if let Some(ch) = self.text_input.char(window.keyboard()) {
-                            start_menu.gui.key_input(ch);
-                        }
-                    }
-                    State::NicknameSending => {
-                        start_menu.active_loading_spiner();
-                        if let Ok(msg) = self.socket.try_recv() {
-                            if let Message::Binary(bytes) = msg {
-                                if let Ok(decoded) = deserialize(&bytes) {
-                                    if let Packet::JoinResult{success} = decoded {
-                                        if success {
-                                            self.scene = Scene::InGame(InGame{nickname: start_menu.nickname()});
-                                            self.state = State::InGame;
-                                            println!("??");
-                                        }
-                                        else {
-                                            self.scene = Scene::Panic(Panic::new("fail to join".to_string()));
-                                            self.state = State::InGame;
-                                            println!("!!");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        self.scene = Scene::Panic(Panic::new("invalid state".to_string()));
-                        return Ok(());
-                    }
-                }
-            }
-            _ => {}
-        }
+    fn draw(&mut self, window: &mut Window, data: &mut Self::Data) -> Result<()> {
+        window.clear(Color::WHITE)?;
         Ok(())
+    }
+}
+
+struct GameState {
+    game: Game<Gamedata>,
+}
+
+impl quicksilver::lifecycle::State for GameState {
+    fn new() -> Result<GameState> {
+        Ok(GameState{
+               game: Game{
+                   current_scene: Box::new(StartMenu::new()),
+                   data: Gamedata::new(),
+            }})
+    }
+    fn update(&mut self, window: &mut Window) -> Result<()> {
+        self.game.update(window)
     }
     fn draw(&mut self, window: &mut Window) -> Result<()> {
-        match &mut self.scene {
-            Scene::Panic(Panic{ref mut gui}) => {
-                window.clear(Color::WHITE)?;
-                let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
-                gui.draw(&mut dc);
-            }
-            Scene::StartMenu(ref mut start_menu) => {
-                match self.state {
-                    State::Connecting | State::NicknameSending => {
-                        window.clear(Color{r: 0.8, g: 0.8, b: 0.8, a: 1.0 })?;
-                    }
-                    _ => {
-                        window.clear(Color::WHITE)?;
-                    }
-                }
-                let mut dc = QuickSilverDrawContext::new(window, &mut self.default_font);
-                start_menu.gui.draw(&mut dc);
-            }
-            Scene::InGame(ref mut in_game) => {
-                window.clear(Color::WHITE)?;
-            }
-            _ => {}
-        }
-        Ok(())
+        self.game.draw(window)
     }
 }
 
 fn main() {
-    stdweb::initialize();
-    run::<Game>("Gradual Suicide", Vector::new(WINDOW_W, WINDOW_H), Settings::default());
+    //stdweb::initialize();
+    run::<GameState>("Gradual Suicide", Vector::new(WINDOW_W, WINDOW_H), Settings::default());
 }

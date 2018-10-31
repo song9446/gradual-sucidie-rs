@@ -2,10 +2,21 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=512,height=device-height,user-scalable=no">
+        <meta name="viewport" content="width=600,user-scalable=no,initial-scale=1">
         <title>Gradual Sucide</title>
     </head>
     <body>
         <script src="client.js"></script>
+        <script src="js/touch2mouse.js"></script>
+        <script src="js/viewporter.js"></script>
+        <script> 
+            viewporter(600, 800);
+            let worker = setInterval(()=>{
+                if(document.getElementsByTagName("canvas").length > 0){
+                    clearInterval(worker);
+                    touch2mouse(document.getElementsByTagName("canvas")[0]);
+                }
+            }, 100);
+        </script>
     </body>
 </html>
